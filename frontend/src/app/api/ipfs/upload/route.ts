@@ -16,7 +16,7 @@ function parseDataUrl(dataUrl: string): { mimeType: string; buffer: Buffer } {
 
 export async function POST(request: NextRequest) {
   try {
-    const pinataJwt = process.env.PINATA_JWT;
+    const pinataJwt = process.env.NEXT_PUBLIC_PINATA_JWT;
     if (!pinataJwt) {
       return NextResponse.json(
         { message: "PINATA_JWT is not configured" },
@@ -46,7 +46,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: "imageDataUrl required" }, { status: 400 });
       }
       const { mimeType, buffer } = parseDataUrl(dataUrl);
-      file = new Blob([buffer], { type: mimeType });
+      const uint8 = new Uint8Array(buffer);                    // copies the data
+      file = new Blob([uint8], { type: mimeType });
     }
 
     // Build multipart/form-data payload for Pinata
