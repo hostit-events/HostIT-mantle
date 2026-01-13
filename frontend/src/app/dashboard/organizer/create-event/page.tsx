@@ -14,6 +14,7 @@ import { useIsLoggedIn } from "@dynamic-labs/sdk-react-core";
 import Link from "next/link";
 import { MdEventBusy } from "react-icons/md";
 import { BsStars } from "react-icons/bs";
+import axios from 'axios';
 
 const ReactQuill = dynamic(() => import("react-quill"), {
   ssr: false,
@@ -49,30 +50,30 @@ const Page = () => {
     handleSubmit,
   } = useEventForm({
     onValidSubmit: async (data) => {
+      const formData = new FormData();
       const firstTicket = data.ticketTypes[0];
       try {
         // Upload image to IPFS if it's a data URL
-        // let imageCid = "";
-        // if (data.eventImage && data.eventImage.startsWith("data:")) {
-        //   const upRes = await fetch("/api/ipfs/upload", {
-        //     method: "POST",
-        //     headers: { "Content-Type": "application/json" },
-        //     body: JSON.stringify({ imageDataUrl: data.eventImage, name: data.eventName || "event-image" }),
-        //   });
-        //   if (!upRes.ok) {
-        //     const msg = await upRes.text();
-        //     throw new Error(`Failed to upload image to IPFS: ${msg}`);
-        //   }
-        //   const up = await upRes.json();
-        //   imageCid = up.cid;
-        // } else if (data.eventImage && data.eventImage.startsWith("ipfs://")) {
-        //   imageCid = data.eventImage.replace("ipfs://", "");
-        // } else if (data.eventImage && /\/ipfs\//.test(data.eventImage)) {
-        //   const m = data.eventImage.match(/\/ipfs\/([^/?]+)/);
-        //   imageCid = m?.[1] ?? data.eventImage;
-        // } else {
-        //   imageCid = data.eventImage;
-        // }
+        const handleUpload = async () => {
+          formData.append("file", data.eventImage);
+          const response = await axios.post(
+            "https://api.pinata.cloud/pinning/pinFileToIPFS",
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+                Authorization: `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
+              },
+            }
+          );
+          if (response) {
+            console.log(response)
+            // setSuccessfulResponse(response.data.IpfsHash);
+            // setHasUploaded(true);
+          }
+        };
+
+        // await handleUpload()
 
         await createEventMutation.mutateAsync({
           name: data.eventName,

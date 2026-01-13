@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     // Build multipart/form-data payload for Pinata
     const formData = new FormData();
-    formData.append("file", file as Blob, name ? `${name}.png` : undefined);
+    formData.append("file", file);
 
     if (name) {
       const metadata = { name };
