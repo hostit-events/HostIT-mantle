@@ -74,7 +74,8 @@ const Page = (props: Props) => {
           try {
             const eRes = await fetch(`/api/events/${r.eventId}`, { cache: "no-store" });
             if (!eRes.ok) return null;
-            return await eRes.json();
+            const data = await eRes.json();
+            return data.event;
           } catch {
             return null;
           }

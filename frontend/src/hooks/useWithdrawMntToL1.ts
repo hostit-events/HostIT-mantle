@@ -5,22 +5,23 @@ import { useAccount } from 'wagmi';
 import { CrossChainMessenger, MessageStatus } from '@mantleio/sdk';
 import { walletClient as viemWalletClient } from '@/lib/chain';
 
-export type DepositStatus = 
+export type WithdrawalStatus = 
   | 'idle'
-  | 'approving'
-  | 'depositing'
-  | 'waiting_l1'
-  | 'waiting_l2'
+  | 'initiating'
+  | 'waiting_state_root'
+  | 'proving'
+  | 'waiting_challenge'
+  | 'finalizing'
   | 'success'
   | 'error';
 
-export type DepositStep = {
-  status: DepositStatus;
+export type WithdrawalStep = {
+  status: WithdrawalStatus;
   message: string;
   progress: number;
 };
 
-interface MantleDepositConfig {
+interface MantleWithdrawalConfig {
   l1ChainId: number;
   l2ChainId: number;
   l1RpcUrl: string;
@@ -29,10 +30,10 @@ interface MantleDepositConfig {
   l2MntAddress: `0x${string}`;
 }
 
-export const useMantleDeposit = (config: MantleDepositConfig) => {
+export const useMantleWithdrawal = (config: MantleWithdrawalConfig) => {
   const { address, isConnected } = useAccount();
   
-  const [step, setStep] = useState<DepositStep>({
+  const [step, setStep] = useState<WithdrawalStep>({
     status: 'idle',
     message: '',
     progress: 0,
@@ -40,7 +41,7 @@ export const useMantleDeposit = (config: MantleDepositConfig) => {
   const [txHash, setTxHash] = useState<string>('');
   const [error, setError] = useState<Error | null>(null);
 
-  const depositMNT = useCallback(
+  const withdrawMNT = useCallback(
     async (amount: string) => {
       // Validation
       if (!isConnected || !address) {
@@ -56,7 +57,7 @@ export const useMantleDeposit = (config: MantleDepositConfig) => {
       const startTime = Date.now();
 
       try {
-        // Get account from wallet client (same pattern as useCreateEvent)
+        // Get account from wallet client
         if (!viemWalletClient) throw new Error("Wallet not available. Connect a wallet.");
         const [account] = await viemWalletClient.getAddresses();
         if (!account) throw new Error("No account connected.");
@@ -65,12 +66,12 @@ export const useMantleDeposit = (config: MantleDepositConfig) => {
         const ethers = await import('ethers');
 
         // Create ethers providers
-        const l1Provider = new ethers.providers.JsonRpcProvider(process.env.L1_RPC);
-        const l2Provider = new ethers.providers.JsonRpcProvider(process.env.L2_RPC);
+        const l1Provider = new ethers.providers.JsonRpcProvider(config.l1RpcUrl);
+        const l2Provider = new ethers.providers.JsonRpcProvider(config.l2RpcUrl);
 
-        // Create Web3Provider from window.ethereum for L1 signer
+        // Create Web3Provider from window.ethereum for L2 signer
         const web3Provider = new ethers.providers.Web3Provider(window.ethereum as any);
-        const l1Signer = web3Provider.getSigner();
+        const l2Signer = web3Provider.getSigner();
 
         // Initialize CrossChainMessenger with user's wallet
         setStep({
@@ -80,84 +81,111 @@ export const useMantleDeposit = (config: MantleDepositConfig) => {
         });
 
         const messenger = new CrossChainMessenger({
-          l1ChainId: 11155111,
-          l2ChainId: 5003,
-          l1SignerOrProvider: l1Signer,
-          l2SignerOrProvider: l2Provider,
+          l1ChainId: config.l1ChainId,
+          l2ChainId: config.l2ChainId,
+          l1SignerOrProvider: l1Provider,
+          l2SignerOrProvider: l2Signer,
           bedrock: true,
         });
 
-        const depositAmount = parseEther(amount);
+        const withdrawalAmount = parseEther(amount);
 
-        // Step 1: Approve MNT
+        // Step 1: Initiate withdrawal on L2
         setStep({
-          status: 'approving',
-          message: 'Approving MNT for bridge... (confirm in wallet)',
+          status: 'initiating',
+          message: 'Initiating withdrawal from L2... (confirm in wallet)',
           progress: 15,
         });
 
-        const approveTx = await messenger.approveERC20(
-          process.env.NEXT_PUBLIC_L1_MNT as `0x${string}`,
-          process.env.NEXT_PUBLIC_L2_MNT as `0x${string}`,
-          depositAmount.toString()
-        );
-        
+        const withdrawTx = await messenger.withdrawMNT(withdrawalAmount.toString());
+        setTxHash(withdrawTx.hash);
+        console.log(`MNT withdrawal transaction hash: ${withdrawTx.hash}`);
+
         setStep({
-          status: 'approving',
-          message: 'Waiting for approval confirmation...',
+          status: 'initiating',
+          message: 'Waiting for L2 confirmation...',
           progress: 25,
         });
-        await approveTx.wait();
+        await withdrawTx.wait();
 
-        // Step 2: Deposit MNT
+        // Step 2: Wait for state root to be published to L1
         setStep({
-          status: 'depositing',
-          message: 'Initiating deposit to L2... (confirm in wallet)',
+          status: 'waiting_state_root',
+          message: 'Waiting for state root to be published to L1 (this may take several minutes)...',
           progress: 40,
         });
 
-        const depositTx = await messenger.depositMNT(depositAmount.toString());
-        setTxHash(depositTx.hash);
-        console.log(`MNT deposit transaction hash: ${depositTx.hash}`);
+        await messenger.waitForMessageStatus(
+          withdrawTx.hash,
+          MessageStatus.READY_TO_PROVE
+        );
 
-        // Step 3: Wait for L1 confirmation
+        // Step 3: Prove the withdrawal on L1
         setStep({
-          status: 'waiting_l1',
-          message: 'Waiting for L1 confirmation...',
+          status: 'proving',
+          message: 'Proving withdrawal on L1... (confirm in wallet)',
           progress: 60,
         });
-        await depositTx.wait();
 
-        // Step 4: Wait for L2 relay
+        const proveTx = await messenger.proveMessage(withdrawTx.hash);
+        console.log(`Prove transaction hash: ${proveTx.hash}`);
+        
         setStep({
-          status: 'waiting_l2',
-          message: 'Waiting for L2 relay (this may take a few minutes)...',
-          progress: 80,
+          status: 'proving',
+          message: 'Waiting for prove confirmation...',
+          progress: 70,
+        });
+        await proveTx.wait();
+
+        // Step 4: Wait for challenge period
+        setStep({
+          status: 'waiting_challenge',
+          message: 'Waiting for challenge period (this may take up to 7 days on mainnet, shorter on testnet)...',
+          progress: 75,
         });
 
         await messenger.waitForMessageStatus(
-          depositTx.hash,
-          MessageStatus.RELAYED
+          withdrawTx.hash,
+          MessageStatus.READY_FOR_RELAY
         );
+
+        // Step 5: Finalize withdrawal on L1
+        setStep({
+          status: 'finalizing',
+          message: 'Finalizing withdrawal on L1... (confirm in wallet)',
+          progress: 90,
+        });
+
+        const finalizeTx = await messenger.finalizeMessage(withdrawTx.hash);
+        console.log(`Finalize transaction hash: ${finalizeTx.hash}`);
+        
+        setStep({
+          status: 'finalizing',
+          message: 'Waiting for finalization...',
+          progress: 95,
+        });
+        await finalizeTx.wait();
 
         // Success
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
         setStep({
           status: 'success',
-          message: `Deposit complete in ${duration}s!`,
+          message: `Withdrawal complete in ${duration}s!`,
           progress: 100,
         });
 
         return {
           success: true,
-          txHash: depositTx.hash,
+          txHash: withdrawTx.hash,
+          proveTxHash: proveTx.hash,
+          finalizeTxHash: finalizeTx.hash,
           amount,
         };
       } catch (err: any) {
-        console.error('MNT deposit error:', err);
+        console.error('MNT withdrawal error:', err);
         
         // Parse error message
-        let errorMessage = 'Deposit failed';
+        let errorMessage = 'Withdrawal failed';
         if (err?.message) {
           if (err.message.includes('user rejected')) {
             errorMessage = 'Transaction rejected by user';
@@ -189,7 +217,7 @@ export const useMantleDeposit = (config: MantleDepositConfig) => {
   }, []);
 
   return {
-    depositMNT,
+    withdrawMNT,
     reset,
     step,
     txHash,

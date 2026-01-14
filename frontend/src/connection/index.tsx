@@ -4,16 +4,17 @@ import { DynamicWagmiConnector } from "@dynamic-labs/wagmi-connector";
 import { createConfig, WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http } from "viem";
-import { mantleSepoliaTestnet } from "viem/chains";
+import { mantleSepoliaTestnet, sepolia } from "viem/chains";
 import { DynamicContextProvider } from "@dynamic-labs/sdk-react-core";
 import { EthereumWalletConnectors } from "@dynamic-labs/ethereum";
 import { ZeroDevSmartWalletConnectors } from "@dynamic-labs/ethereum-aa";
 export const createWagmiConfig = () =>
   createConfig({
-    chains: [mantleSepoliaTestnet],
+    chains: [mantleSepoliaTestnet, sepolia],
     multiInjectedProviderDiscovery: false,
     transports: {
       [mantleSepoliaTestnet.id]: http(process.env.NEXT_PUBLIC_RPC_URL),
+      [sepolia.id]: http(process.env.L1_RPC),
     },
   });
 
