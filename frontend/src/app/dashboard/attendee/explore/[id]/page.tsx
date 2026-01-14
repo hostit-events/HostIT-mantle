@@ -114,7 +114,7 @@ const Page = () => {
         const res = await fetch(`/api/events/${id}`);
         if (!res.ok) return;
         const data = await res.json();
-        setEventJson(data);
+        setEventJson(data.event);
       } catch (e) {
         console.error(e);
       }

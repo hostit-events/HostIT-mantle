@@ -1,12 +1,13 @@
 import { createPublicClient, createWalletClient, http, custom, type Chain } from "viem";
-import { mantleSepoliaTestnet } from "viem/chains";
+import { mantleSepoliaTestnet, sepolia } from "viem/chains";
 
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.sepolia.mantle.xyz";
 
-type SupportedChainName = 'mantleSepoliaTestnet';
+type SupportedChainName = 'mantleSepoliaTestnet' | 'sepolia';
 
 const CHAIN_MAP: Record<SupportedChainName, Chain> = {
-  mantleSepoliaTestnet
+  mantleSepoliaTestnet,
+  sepolia, 
 };
 
 const selectedChainName = (process.env.NEXT_PUBLIC_CHAIN?.toLowerCase() as SupportedChainName) || "mantleSepoliaTestnet";
