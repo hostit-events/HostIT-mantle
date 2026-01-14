@@ -7,7 +7,7 @@ import { http } from "viem";
 import { mantleSepoliaTestnet } from "viem/chains";
 import { DynamicContextProvider } from "@dynamic-labs/sdk-react-core";
 import { EthereumWalletConnectors } from "@dynamic-labs/ethereum";
-import { ZeroDevSmartWalletConnectors } from "@dynamic-labs/ethereum-aa";
+// import { ZeroDevSmartWalletConnectors } from "@dynamic-labs/ethereum-aa"; // Disabled - not configured
 export const createWagmiConfig = () =>
   createConfig({
     chains: [mantleSepoliaTestnet],
@@ -35,7 +35,7 @@ export const AppWagmiProvider = ({
           "",
         walletConnectors: [
           EthereumWalletConnectors,
-          ZeroDevSmartWalletConnectors,
+          // ZeroDevSmartWalletConnectors, // Disabled - requires ZERODEV_PROJECT_ID configuration
         ],
         events: {
           onLogout: () => {
