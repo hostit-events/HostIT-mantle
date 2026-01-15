@@ -3,6 +3,7 @@ import { publicClient, walletClient as defaultWalletClient, DIAMOND_ADDRESS, get
 import MarketplaceFacetAbi from "@/abis/MarketplaceFacetAbi.json";
 import { createRegistration, type RegistrationPayload } from "@/lib/services/registration";
 import type { WalletClient } from "viem";
+import { numberToHex } from "viem";
 
 export type RegisterInput = RegistrationPayload & {
   ticketId: number;
@@ -29,6 +30,23 @@ export function useRegisterForEvent() {
         functionName: "getTicketFee",
         args: [BigInt(input.ticketId), feeType],
       });
+
+      // Check and switch chain if necessary
+      const currentChainId = await activeWalletClient.getChainId();
+      if (currentChainId !== SELECTED_CHAIN.id) {
+        try {
+          await activeWalletClient.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: numberToHex(SELECTED_CHAIN.id) }],
+          });
+        } catch (error: any) {
+          console.error("Failed to switch chain:", error);
+          if (error.code === 4902) {
+            throw new Error("Target chain not found in wallet. Please add Mantle Sepolia Testnet.");
+          }
+          throw new Error("Failed to switch network. Please switch to Mantle Sepolia manually.");
+        }
+      }
 
       // 2) Mint/payable purchase
       const hash = await activeWalletClient.writeContract({

@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { createEvent, updateEvent, type EventCreatePayload } from "@/lib/services/events";
-import { publicClient, DIAMOND_ADDRESS, getWalletClient, SELECTED_CHAIN } from "@/lib/chain";
+import { publicClient, walletClient, DIAMOND_ADDRESS, getWalletClient, SELECTED_CHAIN } from "@/lib/chain";
 import FactoryFacetAbi from "@/abis/FactoryFacetAbi.json";
 import type { AbiEvent, WalletClient } from "viem";
 import { parseEther, decodeEventLog, numberToHex } from "viem";
@@ -50,7 +50,7 @@ export function useCreateEvent() {
       const { id: eventId, link: metadataUri } = await createEvent(payload);
 
       // 2) Write createTicket on-chain - use provided walletClient or try window.ethereum
-      const activeWalletClient = input.walletClient || (typeof window !== "undefined" && (window as any).ethereum ? getWalletClient((window as any).ethereum) : undefined);
+      const activeWalletClient = input.walletClient || (typeof window !== "undefined" && (window as any).ethereum ? getWalletClient((window as any).ethereum) : walletClient);
       if (!activeWalletClient) throw new Error("Wallet not connected. Please connect your wallet first.");
       const [account] = await activeWalletClient.getAddresses();
       if (!account) throw new Error("No account connected. Please connect your wallet.");

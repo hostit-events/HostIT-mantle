@@ -96,11 +96,25 @@ const Page = () => {
 
         if (!activeWalletClient && primaryWallet) {
           try {
-            // @ts-ignore
-            const provider = await (primaryWallet.connector as any).getWalletClient?.();
+            // Try to get provider from Dynamic
+            const connector = primaryWallet.connector as any;
+            const provider = connector?.getProvider ? await connector.getProvider() :
+              connector?.getWalletClient ? await connector.getWalletClient() : null; // Fallback to getWalletClient if getProvider missing? Mostly getProvider is what we want for pure provider.
+
+            // Actually, we have getWalletClient helper imported from "@/lib/chain"
+            // We should use that if we can get a provider.
             if (provider) {
-              // @ts-ignore
-              activeWalletClient = provider;
+              // If the provider is a client (viem), we can use it?
+              // Or if it's an EIP-1193 provider.
+
+              // Let's assume getWalletClient imported from lib/chain can handle it
+              const clientFromHelper = getWalletClient(provider);
+              if (clientFromHelper) {
+                activeWalletClient = clientFromHelper;
+              } else {
+                // Maybe provider IS the client??
+                activeWalletClient = provider;
+              }
             }
           } catch (e) {
             console.error("Failed to get wallet client from dynamic", e);
@@ -128,7 +142,7 @@ const Page = () => {
           endDateIso: data.endDate,
           maxTicketsPerUser: 1,
           isRefundable: data.isRefundable,
-          walletClient: activeWalletClient,
+          walletClient: activeWalletClient as any,
         });
 
         toast.dismiss();
@@ -390,8 +404,8 @@ const Page = () => {
                     onBlur={() => handleTicketBlur(ticket.id, "name")}
                     placeholder="Ticket name"
                     className={`w-full bg-transparent border-[0.5px] ${errors.ticketErrors?.[ticket.id]?.name && touched[`ticket_${ticket.id}_name`]
-                        ? "border-red-400"
-                        : "border-white/60"
+                      ? "border-red-400"
+                      : "border-white/60"
                       } h-14 md:h-16 text-base md:text-lg p-4 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/80`}
                   />
                   {errors.ticketErrors?.[ticket.id]?.name && touched[`ticket_${ticket.id}_name`] && (
@@ -419,8 +433,8 @@ const Page = () => {
                       onBlur={() => handleTicketBlur(ticket.id, "price")}
                       placeholder="Ticket price"
                       className={`w-full bg-transparent border-[0.5px] ${errors.ticketErrors?.[ticket.id]?.price && touched[`ticket_${ticket.id}_price`]
-                          ? "border-red-400"
-                          : "border-white/60"
+                        ? "border-red-400"
+                        : "border-white/60"
                         } h-14 md:h-16 text-base md:text-lg p-4 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/80`}
                     />
                     {errors.ticketErrors?.[ticket.id]?.price && touched[`ticket_${ticket.id}_price`] && (
@@ -441,8 +455,8 @@ const Page = () => {
                     onBlur={() => handleTicketBlur(ticket.id, "quantity")}
                     placeholder="Quantity"
                     className={`w-full bg-transparent border-[0.5px] ${errors.ticketErrors?.[ticket.id]?.quantity && touched[`ticket_${ticket.id}_quantity`]
-                        ? "border-red-400"
-                        : "border-white/60"
+                      ? "border-red-400"
+                      : "border-white/60"
                       } h-14 md:h-16 text-base md:text-lg p-4 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/80`}
                   />
                   {errors.ticketErrors?.[ticket.id]?.quantity && touched[`ticket_${ticket.id}_quantity`] && (
@@ -517,8 +531,8 @@ const Page = () => {
                 <Button
                   onClick={handleSubmit}
                   className={`p-4 md:p-6 text-white font-bold text-base md:text-lg transition-all duration-200 ${canCreate
-                      ? "bg-subsidiary hover:bg-subsidiary/80 hover:scale-105 cursor-pointer"
-                      : "bg-gray-600 cursor-not-allowed opacity-50"
+                    ? "bg-subsidiary hover:bg-subsidiary/80 hover:scale-105 cursor-pointer"
+                    : "bg-gray-600 cursor-not-allowed opacity-50"
                     }`}
                   disabled={!canCreate}
                 >
