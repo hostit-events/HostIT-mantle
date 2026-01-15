@@ -56,6 +56,29 @@ export const useMantleWithdrawal = (config: MantleWithdrawalConfig) => {
         const providerToUse = overrides?.provider || (typeof window !== 'undefined' ? (window as any).ethereum : undefined);
         if (!providerToUse) throw new Error("No wallet provider available");
 
+        // Switch to L2 if needed
+        if (providerToUse.request) {
+          try {
+            // We can check chainId via provider.request({ method: 'eth_chainId' }) or just request switch
+            // Simplest is to just request switch if we can know current chain, but request switch is safe if already on chain usually?
+            // Actually, mostly safer to check first or just try to switch.
+            // Let's try to get chainId first.
+            const currentChainIdHex = await providerToUse.request({ method: 'eth_chainId' });
+            const targetChainIdHex = `0x${config.l2ChainId.toString(16)}`;
+
+            if (currentChainIdHex && currentChainIdHex !== targetChainIdHex) {
+              await providerToUse.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: targetChainIdHex }],
+              });
+            }
+          } catch (e) {
+            console.error("Failed to switch chain to L2:", e);
+            // Proceed and let it fail if wrong chain, or throw?
+            // Better to throw if we know it's wrong, but maybe just log warning.
+          }
+        }
+
         // Import ethers dynamically
         const ethers = await import('ethers');
 

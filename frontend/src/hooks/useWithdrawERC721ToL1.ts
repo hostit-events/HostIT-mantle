@@ -56,6 +56,23 @@ export const useWithdrawERC721ToL1 = (config: MantleERC721Config) => {
       try {
         const providerToUse = overrides?.provider || (typeof window !== 'undefined' ? (window as any).ethereum : undefined);
 
+        // Switch to L2 if needed
+        if (providerToUse?.request) {
+          try {
+            const currentChainIdHex = await providerToUse.request({ method: 'eth_chainId' });
+            const targetChainIdHex = `0x${config.l2ChainId.toString(16)}`;
+
+            if (currentChainIdHex && currentChainIdHex !== targetChainIdHex) {
+              await providerToUse.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: targetChainIdHex }],
+              });
+            }
+          } catch (e) {
+            console.error("Failed to switch chain to L2:", e);
+          }
+        }
+
         // Get account from wallet client
         if (!viemWalletClient) throw new Error("Wallet not available. Connect a wallet.");
         const [account] = await viemWalletClient.getAddresses();

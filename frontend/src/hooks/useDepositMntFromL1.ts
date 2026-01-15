@@ -55,6 +55,25 @@ export const useMantleDeposit = (config: MantleDepositConfig) => {
         const providerToUse = overrides?.provider || (typeof window !== 'undefined' ? (window as any).ethereum : undefined);
         if (!providerToUse) throw new Error("No wallet provider available");
 
+        // Switch to L1 if needed
+        if (providerToUse.request) {
+          try {
+            // Check chainId
+            const currentChainIdHex = await providerToUse.request({ method: 'eth_chainId' });
+            const targetChainIdHex = `0x${config.l1ChainId.toString(16)}`;
+
+            if (currentChainIdHex && currentChainIdHex !== targetChainIdHex) {
+              await providerToUse.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: targetChainIdHex }],
+              });
+            }
+          } catch (e) {
+            console.error("Failed to switch chain to L1:", e);
+            // Proceed and let it fail if wrong chain, or throw?
+          }
+        }
+
         // Import ethers dynamically
         const ethers = await import('ethers');
 
