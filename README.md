@@ -38,9 +38,15 @@ HostIt leverages the **Mantle Network** to solve the distinct challenges of on-c
 1.  **Cost Efficiency**: Minting thousands of NFT tickets is prohibitively expensive on L1. Mantle's low fees make it viable.
 2.  **Speed**: fast finality is crucial for QR code check-in at physical gates.
 3.  **Future Proofing**: The Diamond proxy allows us to add new features (like Soulbound Tickets or Dynamic Pricing) to the same address on Mantle.
+4.  **Cross-Layer Payment**: Utilizing the **Mantle SDK**, users can pay for tickets using funds directly from L1 (Ethereum) without bridging first, smoothing the onboarding process.
+5.  **Cross-Chain Bridging**: Tickets (NFTs) can be bridged back to L1 or other L2s, giving users true ownership and flexibility.
 
 ## 🤝 Value to the Mantle Ecosystem
 HostIt brings a **production-ready, real-world utility** to Mantle. Unlike speculative DeFi apps, HostIt drives mainstream adoption by onboard non-crypto natives through events. It showcases Mantle's capability to handle high-frequency, low-value transactions (tickets) reliability.
+
+## 📜 Contract Address
+
+-   **HostItTickets**: [`0x9f0ed461329DE6fE31A16749048FfD4E76869F0a`](https://sepolia.mantlescan.xyz/address/0x9f0ed461329de6fe31a16749048ffd4e76869f0a#multipleProxyContract)
 
 ## 🛠 Getting Started
 
