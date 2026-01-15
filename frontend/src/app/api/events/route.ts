@@ -77,7 +77,7 @@ export async function GET() {
     if (!conn) {
       return NextResponse.json({ events: [] }, { status: 200 });
     }
-    const events = await Event.find({}).lean();
+    const events = await Event.find({}).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ events }, { status: 200 });
   } catch (error) {
     console.error("Error fetching events:", error);
